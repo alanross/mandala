@@ -36,7 +36,6 @@
 
 var RamerDouglasPeucker = function()
 {
-	// square distance between 2 points
 	function getSqDist( p1, p2 )
 	{
 		var dx = p1.x - p2.x;
@@ -45,7 +44,6 @@ var RamerDouglasPeucker = function()
 		return dx * dx + dy * dy;
 	}
 
-	// square distance from a point to a segment
 	function getSqSegDist( p, p1, p2 )
 	{
 		var x = p1.x;
@@ -76,7 +74,6 @@ var RamerDouglasPeucker = function()
 		return dx * dx + dy * dy;
 	}
 
-	// basic distance-based simplification
 	function simplifyRadialDist( points, sqTolerance )
 	{
 		var prevPoint = points[ 0 ];
@@ -124,7 +121,9 @@ var RamerDouglasPeucker = function()
 			{
 				simplifyDPStep( points, first, index, sqTolerance, simplified );
 			}
+
 			simplified.push( points[ index ] );
+
 			if( last - index > 1 )
 			{
 				simplifyDPStep( points, index, last, sqTolerance, simplified );
@@ -145,7 +144,7 @@ var RamerDouglasPeucker = function()
 	}
 
 	// both algorithms combined for awesome performance
-	this.process = function( points, tolerance, highestQuality )
+	this.process = function( points, tolerance )
 	{
 		if( points.length <= 2 )
 		{
@@ -154,7 +153,7 @@ var RamerDouglasPeucker = function()
 
 		var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
 
-		points = highestQuality ? points : simplifyRadialDist( points, sqTolerance );
+		points = simplifyRadialDist( points, sqTolerance );
 		points = simplifyDouglasPeucker( points, sqTolerance );
 
 		return points;
@@ -179,17 +178,15 @@ Mandala = function( color, slices )
 	var _tempCanvas;
 	var _tempContext;
 
-	var _simplify;
+	var _rdp;
 
-	var _coords = [];
-	var _test = [];
+	var _rdpCoords = [];
+	var _reaCoords = [];
 	var _down = false;
 
 	function init()
 	{
-		_simplify = new RamerDouglasPeucker();
-
-		console.log( "_simplify", _simplify );
+		_rdp = new RamerDouglasPeucker();
 
 		_mainCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
 		_tempCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
@@ -214,8 +211,8 @@ Mandala = function( color, slices )
 		_centerX = _width >> 1;
 		_centerY = _height >> 1;
 
-		_coords = [];
-		_test = [];
+		_rdpCoords = [];
+		_reaCoords = [];
 
 		_container.css( { "top": 0, "left": 0, "width": _width, "height": _height } );
 
@@ -268,12 +265,12 @@ Mandala = function( color, slices )
 	{
 		_tempContext.clearRect( 0, 0, _tempCanvas.width, _tempCanvas.height );
 
-		if( _coords.length == 0 )
+		if( _rdpCoords.length == 0 )
 		{
 			return;
 		}
 
-		var m = _coords.length - 1;
+		var n = _rdpCoords.length - 2;
 		var angle = 0;
 		var step = 360 / _slices;
 		var mirror = -1;
@@ -281,9 +278,9 @@ Mandala = function( color, slices )
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
-		if( _coords.length == 1 )
+		if( _rdpCoords.length == 1 )
 		{
-			var p = _coords[ 0 ];
+			var p = _rdpCoords[ 0 ];
 
 			for( var i = 0; i < _slices; ++i )
 			{
@@ -322,7 +319,7 @@ Mandala = function( color, slices )
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.beginPath();
 
-				var p0 = _coords[ 0 ];
+				var p0 = _rdpCoords[ 0 ];
 				var p1;
 
 				var ra0 = rAng + p0.ang;
@@ -332,17 +329,15 @@ Mandala = function( color, slices )
 					ra0 = rAng + rStp - p0.ang;
 				}
 
-				var x0 = _centerX + p0.dst * Math.cos( ra0 );
-				var y0 = _centerY + p0.dst * Math.sin( ra0 );
-
-				_tempContext.moveTo( x0, y0 );
-
-				var n = _coords.length - 2;
+				_tempContext.moveTo(
+						_centerX + p0.dst * Math.cos( ra0 ),
+						_centerY + p0.dst * Math.sin( ra0 )
+				);
 
 				for( var j = 1; j < n; ++j )
 				{
-					p0 = _coords[ j ];
-					p1 = _coords[ j + 1 ];
+					p0 = _rdpCoords[ j ];
+					p1 = _rdpCoords[ j + 1 ];
 
 					var ra0 = rAng + p0.ang;
 					var ra1 = rAng + p1.ang;
@@ -362,8 +357,8 @@ Mandala = function( color, slices )
 					_tempContext.quadraticCurveTo( x0, y0, ( ( x0 + x1 ) * 0.5 ), ( ( y0 + y1 ) * 0.5 ) );
 				}
 
-				p0 = _coords[ j ];
-				p1 = _coords[ j + 1 ];
+				p0 = _rdpCoords[ j ];
+				p1 = _rdpCoords[ j + 1 ];
 
 				var ra0 = rAng + p0.ang;
 				var ra1 = rAng + p1.ang;
@@ -374,43 +369,13 @@ Mandala = function( color, slices )
 					ra1 = rAng + rStp - p1.ang;
 				}
 
-				var x0 = _centerX + p0.dst * Math.cos( ra0 );
-				var y0 = _centerY + p0.dst * Math.sin( ra0 );
-
-				var x1 = _centerX + p1.dst * Math.cos( ra1 );
-				var y1 = _centerY + p1.dst * Math.sin( ra1 );
-
-				_tempContext.quadraticCurveTo( x0, y0, x1, y1 );
+				_tempContext.quadraticCurveTo(
+						_centerX + p0.dst * Math.cos( ra0 ),
+						_centerY + p0.dst * Math.sin( ra0 ),
+						_centerX + p1.dst * Math.cos( ra1 ),
+						_centerY + p1.dst * Math.sin( ra1 )
+				);
 				_tempContext.stroke();
-
-
-				//for( var j = 0; j < m; ++j )
-				//{
-				//	var p0 = _coords[ j ];
-				//	var p1 = _coords[ j + 1 ];
-				//
-				//	var ra0 = rAng + p0.ang;
-				//	var ra1 = rAng + p1.ang;
-				//
-				//	if( mirror > 0 )
-				//	{
-				//		ra0 = rAng + rStp - p0.ang;
-				//		ra1 = rAng + rStp - p1.ang;
-				//	}
-				//
-				//	var x0 = _centerX + p0.dst * Math.cos( ra0 );
-				//	var y0 = _centerY + p0.dst * Math.sin( ra0 );
-				//
-				//	var x1 = _centerX + p1.dst * Math.cos( ra1 );
-				//	var y1 = _centerY + p1.dst * Math.sin( ra1 );
-				//
-				//
-				//	_tempContext.beginPath();
-				//	_tempContext.moveTo( x0, y0 );
-				//	_tempContext.lineTo( x1, y1 );
-				//	//_tempContext.quadraticCurveTo( (x1 - x0) * 0.5, (y1 - y0) * 0.5, x1, y1 );
-				//	_tempContext.stroke();
-				//}
 
 				_tempContext.restore();
 
@@ -420,22 +385,19 @@ Mandala = function( color, slices )
 		}
 	}
 
-	function getMouse( event )
+	function addPoint( event  )
 	{
 		var rect = event.currentTarget.getBoundingClientRect();
 
-		return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-	}
+		var pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
 
-	function addPoint( pos )
-	{
-		_test.push( pos );
+		_reaCoords.push( pos );
 
-		_coords = _simplify.process( _test, 0.5 );
+		_rdpCoords = _rdp.process( _reaCoords, 1 );
 
-		for( var i = 0; i < _coords.length; ++i )
+		for( var i = 0; i < _rdpCoords.length; ++i )
 		{
-			var p = _coords[i];
+			var p = _rdpCoords[ i ];
 			var dx = p.x - _centerX;
 			var dy = p.y - _centerY;
 
@@ -459,7 +421,7 @@ Mandala = function( color, slices )
 			return;
 		}
 
-		addPoint( getMouse( event ) );
+		addPoint( event );
 
 		requestRender();
 	}
@@ -468,7 +430,7 @@ Mandala = function( color, slices )
 	{
 		_down = false;
 
-		addPoint( getMouse( event ) );
+		addPoint( event );
 
 		requestRender();
 
@@ -476,17 +438,17 @@ Mandala = function( color, slices )
 
 		_tempContext.clearRect( 0, 0, _width, _height );
 
-		console.log( _coords.length, _test.length );
+		console.log( _rdpCoords.length, _reaCoords.length );
 
-		_coords = [];
-		_test = [];
+		_rdpCoords = [];
+		_reaCoords = [];
 	}
 
 	function onMouseDown( event )
 	{
 		_down = true;
 
-		addPoint( getMouse( event ) );
+		addPoint( event );
 
 		requestRender();
 	}
