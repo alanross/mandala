@@ -53,7 +53,7 @@ var RamerDouglasPeucker = function()
 
 		if( dx !== 0 || dy !== 0 )
 		{
-			var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+			var t = ( (p.x - x) * dx + (p.y - y) * dy ) / ( dx * dx + dy * dy );
 
 			if( t > 1 )
 			{
@@ -168,8 +168,8 @@ Mandala = function( color, slices )
 
 	var _width;
 	var _height;
-	var _centerX;
-	var _centerY;
+	var _cx;
+	var _cy;
 
 	var _window;
 	var _container;
@@ -180,8 +180,7 @@ Mandala = function( color, slices )
 
 	var _rdp;
 
-	var _rdpCoords = [];
-	var _reaCoords = [];
+	var _coords = [];
 	var _down = false;
 
 	function init()
@@ -208,11 +207,10 @@ Mandala = function( color, slices )
 		_width = _window.width();
 		_height = _window.height();
 
-		_centerX = _width >> 1;
-		_centerY = _height >> 1;
+		_cx = _width >> 1;
+		_cy = _height >> 1;
 
-		_rdpCoords = [];
-		_reaCoords = [];
+		_coords = [];
 
 		_container.css( { "top": 0, "left": 0, "width": _width, "height": _height } );
 
@@ -251,8 +249,8 @@ Mandala = function( color, slices )
 
 			r = angle * Math.PI / 180;
 
-			_mainContext.moveTo( _centerX + rInner * Math.cos( r ), _centerY + rInner * Math.sin( r ) );
-			_mainContext.lineTo( _centerX + rOuter * Math.cos( r ), _centerY + rOuter * Math.sin( r ) );
+			_mainContext.moveTo( _cx + rInner * Math.cos( r ), _cy + rInner * Math.sin( r ) );
+			_mainContext.lineTo( _cx + rOuter * Math.cos( r ), _cy + rOuter * Math.sin( r ) );
 
 			_mainContext.stroke();
 			_mainContext.restore();
@@ -263,14 +261,23 @@ Mandala = function( color, slices )
 
 	function render()
 	{
-		_tempContext.clearRect( 0, 0, _tempCanvas.width, _tempCanvas.height );
+		_tempContext.clearRect( 0, 0, _width, _height );
 
-		if( _rdpCoords.length == 0 )
+		if( _coords.length == 0 )
 		{
 			return;
 		}
 
-		var n = _rdpCoords.length - 2;
+		for( var i = 0; i < _coords.length; ++i )
+		{
+			var p = _coords[ i ];
+			var dx = p.x - _cx;
+			var dy = p.y - _cy;
+
+			p.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
+			p.ang = Math.atan2( p.y - _cy, p.x - _cx );
+		}
+
 		var angle = 0;
 		var step = 360 / _slices;
 		var mirror = -1;
@@ -278,9 +285,9 @@ Mandala = function( color, slices )
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
-		if( _rdpCoords.length == 1 )
+		if( _coords.length == 1 )
 		{
-			var p = _rdpCoords[ 0 ];
+			var p = _coords[ 0 ];
 
 			for( var i = 0; i < _slices; ++i )
 			{
@@ -293,8 +300,8 @@ Mandala = function( color, slices )
 				var rStp = step * Math.PI / 180;
 
 				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				var x = _centerX + p.dst * Math.cos( r );
-				var y = _centerY + p.dst * Math.sin( r );
+				var x = _cx + p.dst * Math.cos( r );
+				var y = _cy + p.dst * Math.sin( r );
 
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.arc( x, y, _tempContext.lineWidth * 0.5, 0, Math.PI * 2, false );
@@ -309,6 +316,8 @@ Mandala = function( color, slices )
 		}
 		else
 		{
+			var n = _coords.length - 2;
+
 			for( var i = 0; i < _slices; ++i )
 			{
 				var rAng = angle * Math.PI / 180;
@@ -319,25 +328,17 @@ Mandala = function( color, slices )
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.beginPath();
 
-				var p0 = _rdpCoords[ 0 ];
+				var p0 = _coords[ 0 ];
 				var p1;
 
-				var ra0 = rAng + p0.ang;
+				var ra = rAng + ( ( mirror > 0 ) ? rStp - p0.ang : p0.ang );
 
-				if( mirror > 0 )
-				{
-					ra0 = rAng + rStp - p0.ang;
-				}
-
-				_tempContext.moveTo(
-						_centerX + p0.dst * Math.cos( ra0 ),
-						_centerY + p0.dst * Math.sin( ra0 )
-				);
+				_tempContext.moveTo( _cx + p0.dst * Math.cos( ra ), _cy + p0.dst * Math.sin( ra ) );
 
 				for( var j = 1; j < n; ++j )
 				{
-					p0 = _rdpCoords[ j ];
-					p1 = _rdpCoords[ j + 1 ];
+					p0 = _coords[ j ];
+					p1 = _coords[ j + 1 ];
 
 					var ra0 = rAng + p0.ang;
 					var ra1 = rAng + p1.ang;
@@ -348,17 +349,17 @@ Mandala = function( color, slices )
 						ra1 = rAng + rStp - p1.ang;
 					}
 
-					var x0 = _centerX + p0.dst * Math.cos( ra0 );
-					var y0 = _centerY + p0.dst * Math.sin( ra0 );
+					var x0 = _cx + p0.dst * Math.cos( ra0 );
+					var y0 = _cy + p0.dst * Math.sin( ra0 );
 
-					var x1 = _centerX + p1.dst * Math.cos( ra1 );
-					var y1 = _centerY + p1.dst * Math.sin( ra1 );
+					var x1 = _cx + p1.dst * Math.cos( ra1 );
+					var y1 = _cy + p1.dst * Math.sin( ra1 );
 
 					_tempContext.quadraticCurveTo( x0, y0, ( ( x0 + x1 ) * 0.5 ), ( ( y0 + y1 ) * 0.5 ) );
 				}
 
-				p0 = _rdpCoords[ j ];
-				p1 = _rdpCoords[ j + 1 ];
+				p0 = _coords[ j ];
+				p1 = _coords[ j + 1 ];
 
 				var ra0 = rAng + p0.ang;
 				var ra1 = rAng + p1.ang;
@@ -370,10 +371,8 @@ Mandala = function( color, slices )
 				}
 
 				_tempContext.quadraticCurveTo(
-						_centerX + p0.dst * Math.cos( ra0 ),
-						_centerY + p0.dst * Math.sin( ra0 ),
-						_centerX + p1.dst * Math.cos( ra1 ),
-						_centerY + p1.dst * Math.sin( ra1 )
+						_cx + p0.dst * Math.cos( ra0 ), _cy + p0.dst * Math.sin( ra0 ),
+						_cx + p1.dst * Math.cos( ra1 ), _cy + p1.dst * Math.sin( ra1 )
 				);
 				_tempContext.stroke();
 
@@ -385,28 +384,15 @@ Mandala = function( color, slices )
 		}
 	}
 
-	function addPoint( event  )
+	function addPoint( event )
 	{
 		var rect = event.currentTarget.getBoundingClientRect();
 
 		var pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
 
-		_reaCoords.push( pos );
-
-		_rdpCoords = _rdp.process( _reaCoords, 1 );
-
-		for( var i = 0; i < _rdpCoords.length; ++i )
-		{
-			var p = _rdpCoords[ i ];
-			var dx = p.x - _centerX;
-			var dy = p.y - _centerY;
-
-			// dist to center
-			p.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
-
-			// angle on circle
-			p.ang = Math.atan2( p.y - _centerY, p.x - _centerX );
-		}
+		_coords.push( pos );
+		_coords = _rdp.process( _coords, 0.9 );
+		_coords.push( pos );
 	}
 
 	function requestRender()
@@ -438,10 +424,7 @@ Mandala = function( color, slices )
 
 		_tempContext.clearRect( 0, 0, _width, _height );
 
-		console.log( _rdpCoords.length, _reaCoords.length );
-
-		_rdpCoords = [];
-		_reaCoords = [];
+		_coords = [];
 	}
 
 	function onMouseDown( event )
