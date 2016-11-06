@@ -59,10 +59,10 @@ Mandala = function( color, slices )
 	{
 		_mainCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
 		_tempCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
-		_container = $( '<div/>').css( { position: "absolute" } ).append( _mainCanvas ).append( _tempCanvas ).appendTo( "body" );
+		_container = $( '<div/>' ).css( { position: "absolute" } ).append( _mainCanvas ).append( _tempCanvas ).appendTo( "body" );
 
-		_mainCanvas = _mainCanvas[0];
-		_tempCanvas = _tempCanvas[0];
+		_mainCanvas = _mainCanvas[ 0 ];
+		_tempCanvas = _tempCanvas[ 0 ];
 
 		_container.mousedown( onMouseDown ).mouseup( onMouseUp ).mousemove( onMouseMove );
 
@@ -82,7 +82,7 @@ Mandala = function( color, slices )
 
 		_coords = [];
 
-		_container.css( { "top": 0, "left": 0, "width" : _width, "height": _height } );
+		_container.css( { "top": 0, "left": 0, "width": _width, "height": _height } );
 
 		_mainCanvas.width = _width;
 		_mainCanvas.height = _height;
@@ -160,15 +160,9 @@ Mandala = function( color, slices )
 				var rAng = angle * Math.PI / 180;
 				var rStp = step * Math.PI / 180;
 
-				var ra = rAng + p.a;
-
-				if( mirror > 0 )
-				{
-					ra = rAng + rStp - p.a;
-				}
-
-				var x = _centerX + p.d * Math.cos( ra );
-				var y = _centerY + p.d * Math.sin( ra );
+				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+				var x = _centerX + p.dst * Math.cos( r );
+				var y = _centerY + p.dst * Math.sin( r );
 
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.arc( x, y, _tempContext.lineWidth * 0.5, 0, Math.PI * 2, false );
@@ -197,20 +191,20 @@ Mandala = function( color, slices )
 					var p0 = _coords[ j ];
 					var p1 = _coords[ j + 1 ];
 
-					var ra0 = rAng + p0.a;
-					var ra1 = rAng + p1.a;
+					var ra0 = rAng + p0.ang;
+					var ra1 = rAng + p1.ang;
 
 					if( mirror > 0 )
 					{
-						ra0 = rAng + rStp - p0.a;
-						ra1 = rAng + rStp - p1.a;
+						ra0 = rAng + rStp - p0.ang;
+						ra1 = rAng + rStp - p1.ang;
 					}
 
-					var x0 = _centerX + p0.d * Math.cos( ra0 );
-					var y0 = _centerY + p0.d * Math.sin( ra0 );
+					var x0 = _centerX + p0.dst * Math.cos( ra0 );
+					var y0 = _centerY + p0.dst * Math.sin( ra0 );
 
-					var x1 = _centerX + p1.d * Math.cos( ra1 );
-					var y1 = _centerY + p1.d * Math.sin( ra1 );
+					var x1 = _centerX + p1.dst * Math.cos( ra1 );
+					var y1 = _centerY + p1.dst * Math.sin( ra1 );
 
 					_tempContext.lineWidth = _lineWidth;
 					_tempContext.quadraticCurveTo( x0, y0, x1, y1 );
@@ -238,12 +232,10 @@ Mandala = function( color, slices )
 		var dy = pos.y - _centerY;
 
 		// dist to center
-		pos.d = Math.sqrt( dx * dx + dy * dy ) >> 0;
+		pos.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
 
 		// angle on circle
-		pos.a = Math.atan2( pos.y - _centerY, pos.x - _centerX );
-
-		pos.s = _lineWidth;
+		pos.ang = Math.atan2( pos.y - _centerY, pos.x - _centerX );
 
 		_coords.push( pos );
 	}
@@ -274,6 +266,16 @@ Mandala = function( color, slices )
 		requestRender();
 
 		_mainContext.drawImage( _tempCanvas, 0, 0 );
+		//
+		//_mainContext.beginPath();
+		//_mainContext.fillStyle = "#000";
+		//_mainContext.rect( _width - 123, _height - 25, 118, 15 );
+		//_mainContext.fill();
+		//
+		//_mainContext.beginPath();
+		//_mainContext.font = "11px Arial";
+		//_mainContext.fillStyle = "#fff";
+		//_mainContext.fillText( "http://aross.io/mandala", _width - 120, _height - 15 );
 
 		_tempContext.clearRect( 0, 0, _width, _height );
 
@@ -296,13 +298,21 @@ Mandala = function( color, slices )
 
 	function onResize()
 	{
-		console.log( ( _window.height() - _height ), _height, _window.height() );
 		_container.css( { "top": ( _window.height() - _height ) >> 1, "left": ( _window.width() - _width ) >> 1 } );
 	}
 
 	function onKeyDown( event )
 	{
-		if( event.which && 49 <= event.which && event.which <= 57 )
+		if( !event.which )
+		{
+			return;
+		}
+
+		if( event.which == 83 )
+		{
+			exportCanvas();
+		}
+		else if( 49 <= event.which && event.which <= 57 )
 		{
 			var value = ( parseInt( event.which ) - 48 );
 
@@ -310,15 +320,51 @@ Mandala = function( color, slices )
 			{
 				value = 1;
 			}
-			else if( value > 7 )
+			else if( value > 5 )
 			{
-				value = 7;
+				value = 5;
 			}
 
 			_lineWidth = value;
 
 			requestRender();
 		}
+	}
+
+	function exportCanvas()
+	{
+		var canvas = document.createElement( 'canvas' );
+		canvas.width = _width;
+		canvas.height = _height;
+
+		var ctx = canvas.getContext( '2d' );
+
+		ctx.clearRect( 0, 0, _width, _height );
+
+		ctx.beginPath();
+		ctx.fillStyle = "#000";
+		ctx.rect( 0, 0, _width, _height );
+		ctx.fill();
+
+		ctx.drawImage( _mainCanvas, 0, 0 );
+
+		ctx.beginPath();
+		ctx.fillStyle = "#000";
+		ctx.rect( _width - 123, _height - 25, 118, 15 );
+		ctx.fill();
+
+		ctx.beginPath();
+		ctx.font = "11px Arial";
+		ctx.fillStyle = "#fff";
+		ctx.fillText( "http://aross.io/mandala", _width - 120, _height - 15 );
+
+		var img = canvas.toDataURL( "image/png" );
+		var w = window.open( 'about:blank', 'image from canvas' );
+
+		w.document.write(
+				"<span style='display:block; text-align:center'>Right click on image to save.</span>" +
+				"<img src='" + img + "' alt='Exported from Mandala'/>"
+		);
 	}
 
 	init();
