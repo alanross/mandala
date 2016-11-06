@@ -179,17 +179,35 @@ Mandala = function( color, slices )
 		{
 			for( var i = 0; i < _slices; ++i )
 			{
-				_tempContext.save();
-				_tempContext.beginPath();
-				_tempContext.strokeStyle = _color;
-
 				var rAng = angle * Math.PI / 180;
 				var rStp = step * Math.PI / 180;
 
-				for( var j = 0; j < m; ++j )
+				_tempContext.save();
+				_tempContext.strokeStyle = _color;
+				_tempContext.lineWidth = _lineWidth;
+				_tempContext.beginPath();
+
+				var p0 = _coords[ 0 ];
+				var p1;
+
+				var ra0 = rAng + p0.ang;
+
+				if( mirror > 0 )
 				{
-					var p0 = _coords[ j ];
-					var p1 = _coords[ j + 1 ];
+					ra0 = rAng + rStp - p0.ang;
+				}
+
+				var x0 = _centerX + p0.dst * Math.cos( ra0 );
+				var y0 = _centerY + p0.dst * Math.sin( ra0 );
+
+				_tempContext.moveTo( x0, y0 );
+
+				var n = _coords.length - 2;
+
+				for( var j = 1; j < n; ++j )
+				{
+					p0 = _coords[ j ];
+					p1 = _coords[ j + 1 ];
 
 					var ra0 = rAng + p0.ang;
 					var ra1 = rAng + p1.ang;
@@ -206,11 +224,59 @@ Mandala = function( color, slices )
 					var x1 = _centerX + p1.dst * Math.cos( ra1 );
 					var y1 = _centerY + p1.dst * Math.sin( ra1 );
 
-					_tempContext.lineWidth = _lineWidth;
-					_tempContext.quadraticCurveTo( x0, y0, x1, y1 );
+					_tempContext.quadraticCurveTo( x0, y0, ( ( x0 + x1 ) * 0.5 ), ( ( y0 + y1 ) * 0.5 ) );
 				}
 
+				p0 = _coords[ j ];
+				p1 = _coords[ j + 1 ];
+
+				var ra0 = rAng + p0.ang;
+				var ra1 = rAng + p1.ang;
+
+				if( mirror > 0 )
+				{
+					ra0 = rAng + rStp - p0.ang;
+					ra1 = rAng + rStp - p1.ang;
+				}
+
+				var x0 = _centerX + p0.dst * Math.cos( ra0 );
+				var y0 = _centerY + p0.dst * Math.sin( ra0 );
+
+				var x1 = _centerX + p1.dst * Math.cos( ra1 );
+				var y1 = _centerY + p1.dst * Math.sin( ra1 );
+
+				_tempContext.quadraticCurveTo( x0, y0, x1, y1 );
 				_tempContext.stroke();
+
+
+				//for( var j = 0; j < m; ++j )
+				//{
+				//	var p0 = _coords[ j ];
+				//	var p1 = _coords[ j + 1 ];
+				//
+				//	var ra0 = rAng + p0.ang;
+				//	var ra1 = rAng + p1.ang;
+				//
+				//	if( mirror > 0 )
+				//	{
+				//		ra0 = rAng + rStp - p0.ang;
+				//		ra1 = rAng + rStp - p1.ang;
+				//	}
+				//
+				//	var x0 = _centerX + p0.dst * Math.cos( ra0 );
+				//	var y0 = _centerY + p0.dst * Math.sin( ra0 );
+				//
+				//	var x1 = _centerX + p1.dst * Math.cos( ra1 );
+				//	var y1 = _centerY + p1.dst * Math.sin( ra1 );
+				//
+				//
+				//	_tempContext.beginPath();
+				//	_tempContext.moveTo( x0, y0 );
+				//	_tempContext.lineTo( x1, y1 );
+				//	//_tempContext.quadraticCurveTo( (x1 - x0) * 0.5, (y1 - y0) * 0.5, x1, y1 );
+				//	_tempContext.stroke();
+				//}
+
 				_tempContext.restore();
 
 				angle += step;
@@ -266,16 +332,6 @@ Mandala = function( color, slices )
 		requestRender();
 
 		_mainContext.drawImage( _tempCanvas, 0, 0 );
-		//
-		//_mainContext.beginPath();
-		//_mainContext.fillStyle = "#000";
-		//_mainContext.rect( _width - 123, _height - 25, 118, 15 );
-		//_mainContext.fill();
-		//
-		//_mainContext.beginPath();
-		//_mainContext.font = "11px Arial";
-		//_mainContext.fillStyle = "#fff";
-		//_mainContext.fillText( "http://aross.io/mandala", _width - 120, _height - 15 );
 
 		_tempContext.clearRect( 0, 0, _width, _height );
 
