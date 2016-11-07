@@ -462,13 +462,17 @@ Mandala = function( color, slices )
 			return;
 		}
 
-		if( event.which == 83 )
+		if( event.which == 69 ) //e
 		{
 			exportCanvas();
 		}
-		else if( event.which == 65 )
+		else if( event.which == 65 ) //a
 		{
 			animate();
+		}
+		else if( event.which == 83 ) //s
+		{
+			//share?
 		}
 		else if( 49 <= event.which && event.which <= 57 )
 		{
