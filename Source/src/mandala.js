@@ -170,10 +170,74 @@ var RamerDouglasPeucker = function()
 	}
 };
 
+
+/**
+ * https://gist.github.com/revolunet/843889
+ */
+function lzwEncode( s )
+{
+	var dict = {};
+	var data = (s + "").split( "" );
+	var out = [];
+	var currChar;
+	var phrase = data[ 0 ];
+	var code = 256;
+	for( var i = 1; i < data.length; i++ )
+	{
+		currChar = data[ i ];
+		if( dict[ phrase + currChar ] != null )
+		{
+			phrase += currChar;
+		}
+		else
+		{
+			out.push( phrase.length > 1 ? dict[ phrase ] : phrase.charCodeAt( 0 ) );
+			dict[ phrase + currChar ] = code;
+			code++;
+			phrase = currChar;
+		}
+	}
+	out.push( phrase.length > 1 ? dict[ phrase ] : phrase.charCodeAt( 0 ) );
+	for( var i = 0; i < out.length; i++ )
+	{
+		out[ i ] = String.fromCharCode( out[ i ] );
+	}
+	return out.join( "" );
+}
+
+function lzwDecode( s )
+{
+	var dict = {};
+	var data = (s + "").split( "" );
+	var currChar = data[ 0 ];
+	var oldPhrase = currChar;
+	var out = [ currChar ];
+	var code = 256;
+	var phrase;
+	for( var i = 1; i < data.length; i++ )
+	{
+		var currCode = data[ i ].charCodeAt( 0 );
+		if( currCode < 256 )
+		{
+			phrase = data[ i ];
+		}
+		else
+		{
+			phrase = dict[ currCode ] ? dict[ currCode ] : (oldPhrase + currChar);
+		}
+		out.push( phrase );
+		currChar = phrase.charAt( 0 );
+		dict[ code ] = oldPhrase + currChar;
+		code++;
+		oldPhrase = phrase;
+	}
+	return out.join( "" );
+}
+
 /**
  * Alan Ross
  */
-Mandala = function( color, slices )
+Mandala = function( containerId, buttonsId, color, slices )
 {
 	var QUANT = 1000;
 	var _slices = slices || 48;
@@ -209,7 +273,7 @@ Mandala = function( color, slices )
 
 		_mainCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
 		_tempCanvas = $( '<canvas/>' ).css( { "position": "absolute", "top": 0, "left": 0 } );
-		_container = $( '<div/>' ).css( { position: "absolute" } ).append( _mainCanvas ).append( _tempCanvas ).appendTo( "body" );
+		_container = $( containerId ).css( { position: "absolute" } ).append( _mainCanvas ).append( _tempCanvas );
 
 		_mainCanvas = _mainCanvas[ 0 ];
 		_tempCanvas = _tempCanvas[ 0 ];
@@ -219,6 +283,7 @@ Mandala = function( color, slices )
 		_window = $( window );
 		_window.resize( onResize ).keydown( onKeyDown ).dblclick( onMouseDoubleClick );
 
+		$( buttonsId ).find( 'i' ).click( onButtonClick );
 		reset();
 
 		importPath();
@@ -456,6 +521,29 @@ Mandala = function( color, slices )
 		reset();
 	}
 
+	function onButtonClick( event )
+	{
+		var action = $( event.currentTarget ).attr( 'data-action' );
+
+		switch( action )
+		{
+			case "share":
+				exportPath();
+				break;
+			case "image":
+				exportImage();
+				break;
+			case "trash":
+				reset();
+				break;
+			case "play":
+				animate();
+				break;
+		}
+
+		console.log( $( event.currentTarget ).attr( 'data-action' ) );
+	}
+
 	function onResize()
 	{
 		_container.css( { "top": ( _window.height() - _height ) >> 1, "left": ( _window.width() - _width ) >> 1 } );
@@ -470,19 +558,7 @@ Mandala = function( color, slices )
 			return false;
 		}
 
-		if( event.which == 69 ) //e
-		{
-			exportCanvas();
-		}
-		else if( event.which == 65 ) //a
-		{
-			animate();
-		}
-		else if( event.which == 83 ) //s
-		{
-			exportPath();
-		}
-		else if( 49 <= event.which && event.which <= 57 )
+		if( 49 <= event.which && event.which <= 57 )
 		{
 			var v = ( parseInt( event.which ) - 48 );
 
@@ -491,7 +567,7 @@ Mandala = function( color, slices )
 			requestRender();
 		}
 
-		//return false;
+		return false;
 	}
 
 	function exportPath()
@@ -514,18 +590,24 @@ Mandala = function( color, slices )
 
 		path = path.replace( /\|$/, '' ).replace( /\.$/, '' );
 
-		window.open( "http://localhost:63342/Mandala/index.html?p=" + path );
+		//path = lzwEncode( path );
+
+		window.prompt( "Copy to clipboard: Ctrl+C, Enter", window.location.href + "?p=" + path );
+
+		//window.open( window.location.href + "?p=" + path );
 	}
 
 	function importPath()
 	{
-		var p = getURLParameter( "p" );
+		var path = getURLParameter( "p" );
 
-		if( p )
+		if( path )
 		{
+			//path = lzwDecode( path );
+
 			_strokeHistory = [];
 
-			var strokes = p.split( "|" );
+			var strokes = path.split( "|" );
 
 			for( var i = 0; i < strokes.length; ++i )
 			{
@@ -534,8 +616,8 @@ Mandala = function( color, slices )
 				for( var j = 0; j < units.length; j += 3 )
 				{
 					var dst = parseInt( units[ j ] );
-					var ang = parseInt( units[ j+1 ] );
-					var wid = parseInt( units[ j+2 ] );
+					var ang = parseInt( units[ j + 1 ] );
+					var wid = parseInt( units[ j + 2 ] );
 
 					if( !isNaN( dst ) && !isNaN( ang ) && !isNaN( wid ) )
 					{
@@ -565,7 +647,7 @@ Mandala = function( color, slices )
 		}
 	}
 
-	function exportCanvas()
+	function exportImage()
 	{
 		var canvas = document.createElement( 'canvas' );
 		canvas.width = _width;
@@ -615,8 +697,12 @@ Mandala = function( color, slices )
 
 	function animateStroke()
 	{
+		_strokeHistoryActive = false;
+
 		if( _strokeHistory.length > ++_strokeHistoryIndex )
 		{
+			_strokeHistoryActive = true;
+
 			var s = _strokeHistory[ _strokeHistoryIndex ];
 
 			if( s.end )
@@ -624,19 +710,15 @@ Mandala = function( color, slices )
 				_strokeEnd = true;
 
 				render();
+				setTimeout( animateStroke, 120 );
 			}
 			else
 			{
 				_stroke.push( s );
 
 				render();
+				setTimeout( animateStroke, 60 );
 			}
-
-			setTimeout( animateStroke, 60 );
-		}
-		else
-		{
-			_strokeHistoryActive = false;
 		}
 	}
 
@@ -645,7 +727,7 @@ Mandala = function( color, slices )
 
 $( function()
 {
-	new Mandala();
+	new Mandala( '#container', '#buttons' );
 } );
 
 
