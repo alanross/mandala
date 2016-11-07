@@ -278,10 +278,12 @@ Mandala = function( containerId, buttonsId, color, slices )
 		_mainCanvas = _mainCanvas[ 0 ];
 		_tempCanvas = _tempCanvas[ 0 ];
 
-		_container.mousedown( onMouseDown ).mouseup( onMouseUp ).mousemove( onMouseMove );
+		_container.on( 'mousedown touchstart', onStrokeStart );
+		_container.on( 'mousemove touchmove', onStrokeMove );
+		_container.on( 'mouseup touchend', onStrokeEnd );
 
 		_window = $( window );
-		_window.resize( onResize ).keydown( onKeyDown ).dblclick( onMouseDoubleClick );
+		_window.resize( onResize ).keydown( onKeyDown );
 
 		$( buttonsId ).find( 'i' ).click( onButtonClick );
 		reset();
@@ -458,11 +460,19 @@ Mandala = function( containerId, buttonsId, color, slices )
 		}
 	}
 
-	function addPoint( event )
+	function addPoint( e )
 	{
-		var rect = event.currentTarget.getBoundingClientRect();
+		if( e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[ 0 ] )
+		{
+			var t = e.originalEvent.touches[ 0 ];
 
-		var pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+			e.clientX = t.pageX;
+			e.clientY = t.pageY;
+		}
+
+		var rect = e.currentTarget.getBoundingClientRect();
+
+		var pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
 		_stroke.push( pos );
 		_stroke = _rdp.process( _stroke, 0.9 );
@@ -487,7 +497,18 @@ Mandala = function( containerId, buttonsId, color, slices )
 		window.requestAnimationFrame( render );
 	}
 
-	function onMouseUp( event )
+	function onStrokeStart( e )
+	{
+		e.preventDefault();
+
+		_down = true;
+
+		addPoint( e );
+
+		requestRender();
+	}
+
+	function onStrokeEnd( event )
 	{
 		_down = false;
 		_strokeEnd = true;
@@ -497,28 +518,16 @@ Mandala = function( containerId, buttonsId, color, slices )
 		requestRender();
 	}
 
-	function onMouseDown( event )
+	function onStrokeMove( e )
 	{
-		_down = true;
+		e.preventDefault();
 
-		addPoint( event );
-
-		requestRender();
-	}
-
-	function onMouseMove( event )
-	{
 		if( _down )
 		{
-			addPoint( event );
+			addPoint( e );
 
 			requestRender();
 		}
-	}
-
-	function onMouseDoubleClick( event )
-	{
-		reset();
 	}
 
 	function onButtonClick( event )
