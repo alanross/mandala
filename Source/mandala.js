@@ -476,18 +476,9 @@ Mandala = function( color, slices )
 		}
 		else if( 49 <= event.which && event.which <= 57 )
 		{
-			var value = ( parseInt( event.which ) - 48 );
+			var v = ( parseInt( event.which ) - 48 );
 
-			if( value < 1 )
-			{
-				value = 1;
-			}
-			else if( value > 5 )
-			{
-				value = 5;
-			}
-
-			_lineWidth = value;
+			_lineWidth = ( v < 1 ) ? 1 : ( ( v > 5 ) ? 5 : v );
 
 			requestRender();
 		}
