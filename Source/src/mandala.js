@@ -511,6 +511,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 	function onStrokeEnd( event )
 	{
 		_down = false;
+
 		_strokeEnd = true;
 
 		addPoint( event );
@@ -549,8 +550,6 @@ Mandala = function( containerId, buttonsId, color, slices )
 				animate();
 				break;
 		}
-
-		console.log( $( event.currentTarget ).attr( 'data-action' ) );
 	}
 
 	function onResize()
