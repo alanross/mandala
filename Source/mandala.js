@@ -293,16 +293,6 @@ Mandala = function( color, slices )
 
 		var rStp = step * Math.PI / 180;
 
-		for( var i = 0; i < _stroke.length; ++i )
-		{
-			var p = _stroke[ i ];
-			var dx = p.x - _cx;
-			var dy = p.y - _cy;
-
-			p.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
-			p.ang = Math.atan2( p.y - _cy, p.x - _cx );
-		}
-
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
@@ -314,14 +304,14 @@ Mandala = function( color, slices )
 			{
 				_tempContext.save();
 				_tempContext.beginPath();
-				_tempContext.lineWidth = _lineWidth;
+				_tempContext.lineWidth = p.wid;
 				_tempContext.strokeStyle = _color;
 
 				var r = ( angle * Math.PI / 180 ) + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
 				var x = _cx + p.dst * Math.cos( r );
 				var y = _cy + p.dst * Math.sin( r );
 
-				_tempContext.lineWidth = _lineWidth;
+				_tempContext.lineWidth = p.wid;
 				_tempContext.arc( x, y, _tempContext.lineWidth * 0.5, 0, Math.PI * 2, false );
 				_tempContext.fill();
 				_tempContext.closePath();
@@ -339,7 +329,6 @@ Mandala = function( color, slices )
 				_tempContext.save();
 
 				_tempContext.strokeStyle = _color;
-				_tempContext.lineWidth = _lineWidth;
 				_tempContext.beginPath();
 
 				var rAng = angle * Math.PI / 180;
@@ -349,6 +338,7 @@ Mandala = function( color, slices )
 				var x1 = _cx + p.dst * Math.cos( r );
 				var y1 = _cy + p.dst * Math.sin( r );
 
+				_tempContext.lineWidth = p.wid;
 				_tempContext.moveTo( x1, y1 );
 
 				var n = _stroke.length - 1;
@@ -408,6 +398,17 @@ Mandala = function( color, slices )
 		_stroke.push( pos );
 		_stroke = _rdp.process( _stroke, 0.9 );
 		_stroke.push( pos );
+
+		for( var i = 0; i < _stroke.length; ++i )
+		{
+			var p = _stroke[ i ];
+			var dx = p.x - _cx;
+			var dy = p.y - _cy;
+
+			p.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
+			p.ang = Math.atan2( p.y - _cy, p.x - _cx );
+			p.wid = _lineWidth;
+		}
 	}
 
 	function requestRender()
