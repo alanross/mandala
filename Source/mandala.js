@@ -175,6 +175,7 @@ var RamerDouglasPeucker = function()
  */
 Mandala = function( color, slices )
 {
+	var QUANT = 1000;
 	var _slices = slices || 48;
 	var _color = color || '#FFFFFF';
 	var _lineWidth = 2;
@@ -183,6 +184,7 @@ Mandala = function( color, slices )
 	var _height;
 	var _cx;
 	var _cy;
+	var _radius;
 
 	var _window;
 	var _container;
@@ -218,6 +220,8 @@ Mandala = function( color, slices )
 		_window.resize( onResize ).keydown( onKeyDown ).dblclick( onMouseDoubleClick );
 
 		reset();
+
+		importPath();
 	}
 
 	function reset()
@@ -227,6 +231,7 @@ Mandala = function( color, slices )
 
 		_cx = _width >> 1;
 		_cy = _height >> 1;
+		_radius = Math.max( _width, _height );
 
 		_stroke = [];
 		_strokeHistory = [];
@@ -257,7 +262,6 @@ Mandala = function( color, slices )
 		var step = 360 / _slices;
 		var rInner = 25;
 		var rOuter = Math.max( _width, _height );
-		var r;
 
 		for( var i = 0; i < _slices; ++i )
 		{
@@ -266,7 +270,7 @@ Mandala = function( color, slices )
 			_mainContext.strokeStyle = '#232323';
 			_mainContext.lineWidth = 1;
 
-			r = angle * Math.PI / 180;
+			var r = angle * Math.PI / 180;
 
 			_mainContext.moveTo( _cx + rInner * Math.cos( r ), _cy + rInner * Math.sin( r ) );
 			_mainContext.lineTo( _cx + rOuter * Math.cos( r ), _cy + rOuter * Math.sin( r ) );
@@ -308,8 +312,8 @@ Mandala = function( color, slices )
 				_tempContext.strokeStyle = _color;
 
 				var r = ( angle * Math.PI / 180 ) + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				var x = _cx + p.dst * Math.cos( r );
-				var y = _cy + p.dst * Math.sin( r );
+				var x = _cx + p.dst * _radius * Math.cos( r );
+				var y = _cy + p.dst * _radius * Math.sin( r );
 
 				_tempContext.lineWidth = p.wid;
 				_tempContext.arc( x, y, _tempContext.lineWidth * 0.5, 0, Math.PI * 2, false );
@@ -335,8 +339,8 @@ Mandala = function( color, slices )
 
 				var p = _stroke[ 0 ];
 				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				var x1 = _cx + p.dst * Math.cos( r );
-				var y1 = _cy + p.dst * Math.sin( r );
+				var x1 = _cx + p.dst * _radius * Math.cos( r );
+				var y1 = _cy + p.dst * _radius * Math.sin( r );
 
 				_tempContext.lineWidth = p.wid;
 				_tempContext.moveTo( x1, y1 );
@@ -347,8 +351,8 @@ Mandala = function( color, slices )
 				{
 					p = _stroke[ j ];
 					r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-					var x2 = _cx + p.dst * Math.cos( r );
-					var y2 = _cy + p.dst * Math.sin( r );
+					var x2 = _cx + p.dst * _radius * Math.cos( r );
+					var y2 = _cy + p.dst * _radius * Math.sin( r );
 
 					_tempContext.quadraticCurveTo( x1, y1, ( ( x1 + x2 ) * 0.5 ), ( ( y1 + y2 ) * 0.5 ) );
 
@@ -358,8 +362,8 @@ Mandala = function( color, slices )
 
 				p = _stroke[ n ];
 				r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				x2 = _cx + p.dst * Math.cos( r );
-				y2 = _cy + p.dst * Math.sin( r );
+				x2 = _cx + p.dst * _radius * Math.cos( r );
+				y2 = _cy + p.dst * _radius * Math.sin( r );
 
 				_tempContext.quadraticCurveTo( x1, y1, x2, y2 );
 				_tempContext.stroke();
@@ -405,8 +409,10 @@ Mandala = function( color, slices )
 			var dx = p.x - _cx;
 			var dy = p.y - _cy;
 
-			p.dst = Math.sqrt( dx * dx + dy * dy ) >> 0;
+			p.dst = ( Math.sqrt( dx * dx + dy * dy ) >> 0 ) / _radius;
+			p.dst = Math.floor( p.dst * QUANT ) / QUANT;
 			p.ang = Math.atan2( p.y - _cy, p.x - _cx );
+			p.ang = Math.floor( p.ang * QUANT ) / QUANT;
 			p.wid = _lineWidth;
 		}
 	}
@@ -457,9 +463,11 @@ Mandala = function( color, slices )
 
 	function onKeyDown( event )
 	{
+		event.preventDefault();
+
 		if( !event.which )
 		{
-			return;
+			return false;
 		}
 
 		if( event.which == 69 ) //e
@@ -472,7 +480,7 @@ Mandala = function( color, slices )
 		}
 		else if( event.which == 83 ) //s
 		{
-			//share?
+			exportPath();
 		}
 		else if( 49 <= event.which && event.which <= 57 )
 		{
@@ -481,6 +489,79 @@ Mandala = function( color, slices )
 			_lineWidth = ( v < 1 ) ? 1 : ( ( v > 5 ) ? 5 : v );
 
 			requestRender();
+		}
+
+		//return false;
+	}
+
+	function exportPath()
+	{
+		var path = "";
+
+		for( var i = 0, n = _strokeHistory.length; i < n; ++i )
+		{
+			var s = _strokeHistory[ i ];
+
+			if( s.end )
+			{
+				path += "|";
+			}
+			else
+			{
+				path += ( s.dst * QUANT ) + "." + ( s.ang * QUANT ) + "." + ( s.wid ) + ".";
+			}
+		}
+
+		path = path.replace( /\|$/, '' ).replace( /\.$/, '' );
+
+		window.open( "http://localhost:63342/Mandala/index.html?p=" + path );
+	}
+
+	function importPath()
+	{
+		var p = getURLParameter( "p" );
+
+		if( p )
+		{
+			_strokeHistory = [];
+
+			var strokes = p.split( "|" );
+
+			for( var i = 0; i < strokes.length; ++i )
+			{
+				var units = strokes[ i ].split( "." );
+
+				for( var j = 0; j < units.length; j += 3 )
+				{
+					var dst = parseInt( units[ j ] );
+					var ang = parseInt( units[ j+1 ] );
+					var wid = parseInt( units[ j+2 ] );
+
+					if( !isNaN( dst ) && !isNaN( ang ) && !isNaN( wid ) )
+					{
+						_strokeHistory.push( { dst: ( dst / QUANT ), ang: ( ang / QUANT ), wid: wid } );
+					}
+				}
+
+				_strokeHistory.push( { end: true } );
+			}
+
+			animate();
+		}
+	}
+
+	function getURLParameter( key )
+	{
+		var vars = window.location.search.substring( 1 ).split( '&' );
+
+		for( var i = 0; i < vars.length; i++ )
+		{
+			var params = vars[ i ].split( '=' );
+
+			if( params[ 0 ] == key )
+			{
+				return params[ 1 ];
+			}
 		}
 	}
 
@@ -520,7 +601,6 @@ Mandala = function( color, slices )
 		);
 	}
 
-
 	function animate()
 	{
 		_stroke = [];
@@ -530,10 +610,10 @@ Mandala = function( color, slices )
 		_mainContext.clearRect( 0, 0, _width, _height );
 		_tempContext.clearRect( 0, 0, _width, _height );
 
-		animateCoords();
+		animateStroke();
 	}
 
-	function animateCoords()
+	function animateStroke()
 	{
 		if( _strokeHistory.length > ++_strokeHistoryIndex )
 		{
@@ -552,7 +632,7 @@ Mandala = function( color, slices )
 				render();
 			}
 
-			setTimeout( animateCoords, 60 );
+			setTimeout( animateStroke, 60 );
 		}
 		else
 		{
