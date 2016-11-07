@@ -170,70 +170,6 @@ var RamerDouglasPeucker = function()
 	}
 };
 
-
-/**
- * https://gist.github.com/revolunet/843889
- */
-function lzwEncode( s )
-{
-	var dict = {};
-	var data = (s + "").split( "" );
-	var out = [];
-	var currChar;
-	var phrase = data[ 0 ];
-	var code = 256;
-	for( var i = 1; i < data.length; i++ )
-	{
-		currChar = data[ i ];
-		if( dict[ phrase + currChar ] != null )
-		{
-			phrase += currChar;
-		}
-		else
-		{
-			out.push( phrase.length > 1 ? dict[ phrase ] : phrase.charCodeAt( 0 ) );
-			dict[ phrase + currChar ] = code;
-			code++;
-			phrase = currChar;
-		}
-	}
-	out.push( phrase.length > 1 ? dict[ phrase ] : phrase.charCodeAt( 0 ) );
-	for( var i = 0; i < out.length; i++ )
-	{
-		out[ i ] = String.fromCharCode( out[ i ] );
-	}
-	return out.join( "" );
-}
-
-function lzwDecode( s )
-{
-	var dict = {};
-	var data = (s + "").split( "" );
-	var currChar = data[ 0 ];
-	var oldPhrase = currChar;
-	var out = [ currChar ];
-	var code = 256;
-	var phrase;
-	for( var i = 1; i < data.length; i++ )
-	{
-		var currCode = data[ i ].charCodeAt( 0 );
-		if( currCode < 256 )
-		{
-			phrase = data[ i ];
-		}
-		else
-		{
-			phrase = dict[ currCode ] ? dict[ currCode ] : (oldPhrase + currChar);
-		}
-		out.push( phrase );
-		currChar = phrase.charAt( 0 );
-		dict[ code ] = oldPhrase + currChar;
-		code++;
-		oldPhrase = phrase;
-	}
-	return out.join( "" );
-}
-
 /**
  * Alan Ross
  */
@@ -369,79 +305,55 @@ Mandala = function( containerId, buttonsId, color, slices )
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
-		if( _stroke.length == 1 )
+		for( var i = 0; i < _slices; ++i )
 		{
+			var rAng = angle * Math.PI / 180;
+
 			var p = _stroke[ 0 ];
+			var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+			var x1 = _cx + p.dst * _radius * Math.cos( r );
+			var y1 = _cy + p.dst * _radius * Math.sin( r );
 
-			for( var i = 0; i < _slices; ++i )
+			_tempContext.beginPath();
+			_tempContext.arc( x1, y1, p.wid * 0.5, 0, Math.PI * 2, false );
+			_tempContext.fill();
+			_tempContext.closePath();
+
+			if( _stroke.length < 2 )
 			{
-				_tempContext.save();
-				_tempContext.beginPath();
-				_tempContext.lineWidth = p.wid;
-				_tempContext.strokeStyle = _color;
-
-				var r = ( angle * Math.PI / 180 ) + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				var x = _cx + p.dst * _radius * Math.cos( r );
-				var y = _cy + p.dst * _radius * Math.sin( r );
-
-				_tempContext.lineWidth = p.wid;
-				_tempContext.arc( x, y, _tempContext.lineWidth * 0.5, 0, Math.PI * 2, false );
-				_tempContext.fill();
-				_tempContext.closePath();
-
-				_tempContext.restore();
-
-				angle += step;
-				mirror *= -1;
+				continue;
 			}
-		}
-		else
-		{
-			for( var i = 0; i < _slices; ++i )
+
+			_tempContext.beginPath();
+			_tempContext.lineWidth = p.wid;
+			_tempContext.moveTo( x1, y1 );
+
+			var n = _stroke.length - 1;
+
+			for( var j = 1; j < n; ++j )
 			{
-				_tempContext.save();
-
-				_tempContext.strokeStyle = _color;
-				_tempContext.beginPath();
-
-				var rAng = angle * Math.PI / 180;
-
-				var p = _stroke[ 0 ];
-				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				var x1 = _cx + p.dst * _radius * Math.cos( r );
-				var y1 = _cy + p.dst * _radius * Math.sin( r );
-
-				_tempContext.lineWidth = p.wid;
-				_tempContext.moveTo( x1, y1 );
-
-				var n = _stroke.length - 1;
-
-				for( var j = 1; j < n; ++j )
-				{
-					p = _stroke[ j ];
-					r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-					var x2 = _cx + p.dst * _radius * Math.cos( r );
-					var y2 = _cy + p.dst * _radius * Math.sin( r );
-
-					_tempContext.quadraticCurveTo( x1, y1, ( ( x1 + x2 ) * 0.5 ), ( ( y1 + y2 ) * 0.5 ) );
-
-					x1 = x2;
-					y1 = y2;
-				}
-
-				p = _stroke[ n ];
+				p = _stroke[ j ];
 				r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
-				x2 = _cx + p.dst * _radius * Math.cos( r );
-				y2 = _cy + p.dst * _radius * Math.sin( r );
+				var x2 = _cx + p.dst * _radius * Math.cos( r );
+				var y2 = _cy + p.dst * _radius * Math.sin( r );
 
-				_tempContext.quadraticCurveTo( x1, y1, x2, y2 );
-				_tempContext.stroke();
+				_tempContext.quadraticCurveTo( x1, y1, ( ( x1 + x2 ) * 0.5 ), ( ( y1 + y2 ) * 0.5 ) );
 
-				angle += step;
-				mirror *= -1;
-
-				_tempContext.restore();
+				x1 = x2;
+				y1 = y2;
 			}
+
+			p = _stroke[ n ];
+			r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+			x2 = _cx + p.dst * _radius * Math.cos( r );
+			y2 = _cy + p.dst * _radius * Math.sin( r );
+
+			_tempContext.quadraticCurveTo( x1, y1, x2, y2 );
+			_tempContext.stroke();
+			_tempContext.closePath();
+
+			angle += step;
+			mirror *= -1;
 		}
 
 		if( _strokeEnd )
@@ -472,13 +384,17 @@ Mandala = function( containerId, buttonsId, color, slices )
 			e.clientY = t.pageY;
 		}
 
+		if( isNaN( e.clientX ) || isNaN( e.clientY ) )
+		{
+			return;
+		}
+
 		var rect = e.currentTarget.getBoundingClientRect();
 
 		var pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
 		_stroke.push( pos );
 		_stroke = _rdp.process( _stroke, 0.9 );
-		_stroke.push( pos );
 
 		for( var i = 0; i < _stroke.length; ++i )
 		{
@@ -561,7 +477,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 
 	function onKeyDown( event )
 	{
-		//event.preventDefault();
+		event.preventDefault();
 
 		if( !event.which )
 		{
@@ -577,7 +493,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 			requestRender();
 		}
 
-		//return false;
+		return false;
 	}
 
 	function exportPath()
@@ -597,16 +513,16 @@ Mandala = function( containerId, buttonsId, color, slices )
 					path += s.wid + ",";
 				}
 
-				path += ( s.dst * QUANT ) + "," + ( s.ang * QUANT ) + ",";
+				path += ( s.dst * QUANT ).toFixed( 0 ) + "," + ( s.ang * QUANT ).toFixed( 0 ) + ",";
 			}
 			else
 			{
-				path = path.replace( /,$/, '' ) + "|";
+				path = path.replace( /,$/, '' ) + "S";
 				wid = -1;
 			}
 		}
 
-		path = path.replace( /\|$/, '' ).replace( /,$/, '' );
+		path = path.replace( /S$/, '' ).replace( /,$/, '' );
 
 		var url = window.location.href.split( '?' )[ 0 ] + "?p=" + path;
 
@@ -623,7 +539,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 		{
 			_strokeHistory = [];
 
-			var strokes = path.split( "|" );
+			var strokes = path.split( "S" );
 
 			for( var i = 0; i < strokes.length; ++i )
 			{
