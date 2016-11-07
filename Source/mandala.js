@@ -193,11 +193,13 @@ Mandala = function( color, slices )
 
 	var _rdp;
 
-	var _path = [];
+	var _stroke = [];
 	var _down = false;
 	var _strokeEnd = false;
 
-	var _history = [];
+	var _strokeHistory = [];
+	var _strokeHistoryIndex = 0;
+	var _strokeHistoryActive = false;
 
 	function init()
 	{
@@ -226,8 +228,8 @@ Mandala = function( color, slices )
 		_cx = _width >> 1;
 		_cy = _height >> 1;
 
-		_path = [];
-		_history = [];
+		_stroke = [];
+		_strokeHistory = [];
 
 		_container.css( { "top": 0, "left": 0, "width": _width, "height": _height } );
 
@@ -280,7 +282,7 @@ Mandala = function( color, slices )
 	{
 		_tempContext.clearRect( 0, 0, _width, _height );
 
-		if( _path.length == 0 )
+		if( _stroke.length == 0 )
 		{
 			return;
 		}
@@ -291,9 +293,9 @@ Mandala = function( color, slices )
 
 		var rStp = step * Math.PI / 180;
 
-		for( var i = 0; i < _path.length; ++i )
+		for( var i = 0; i < _stroke.length; ++i )
 		{
-			var p = _path[ i ];
+			var p = _stroke[ i ];
 			var dx = p.x - _cx;
 			var dy = p.y - _cy;
 
@@ -304,9 +306,9 @@ Mandala = function( color, slices )
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
-		if( _path.length == 1 )
+		if( _stroke.length == 1 )
 		{
-			var p = _path[ 0 ];
+			var p = _stroke[ 0 ];
 
 			for( var i = 0; i < _slices; ++i )
 			{
@@ -342,18 +344,18 @@ Mandala = function( color, slices )
 
 				var rAng = angle * Math.PI / 180;
 
-				var p = _path[ 0 ];
+				var p = _stroke[ 0 ];
 				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
 				var x1 = _cx + p.dst * Math.cos( r );
 				var y1 = _cy + p.dst * Math.sin( r );
 
 				_tempContext.moveTo( x1, y1 );
 
-				var n = _path.length - 1;
+				var n = _stroke.length - 1;
 
 				for( var j = 1; j < n; ++j )
 				{
-					p = _path[ j ];
+					p = _stroke[ j ];
 					r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
 					var x2 = _cx + p.dst * Math.cos( r );
 					var y2 = _cy + p.dst * Math.sin( r );
@@ -364,7 +366,7 @@ Mandala = function( color, slices )
 					y1 = y2;
 				}
 
-				p = _path[ n ];
+				p = _stroke[ n ];
 				r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
 				x2 = _cx + p.dst * Math.cos( r );
 				y2 = _cy + p.dst * Math.sin( r );
@@ -381,11 +383,19 @@ Mandala = function( color, slices )
 
 		if( _strokeEnd )
 		{
+			_strokeEnd = false;
+
 			_mainContext.drawImage( _tempCanvas, 0, 0 );
 
 			_tempContext.clearRect( 0, 0, _width, _height );
 
-			_strokeEnd = false;
+			if( _strokeHistoryActive == false )
+			{
+				_strokeHistory = _strokeHistory.concat( _stroke );
+				_strokeHistory.push( { end: true } );
+			}
+
+			_stroke = [];
 		}
 	}
 
@@ -395,26 +405,14 @@ Mandala = function( color, slices )
 
 		var pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
 
-		_path.push( pos );
-		_path = _rdp.process( _path, 0.9 );
-		_path.push( pos );
+		_stroke.push( pos );
+		_stroke = _rdp.process( _stroke, 0.9 );
+		_stroke.push( pos );
 	}
 
 	function requestRender()
 	{
 		window.requestAnimationFrame( render );
-	}
-
-	function onMouseMove( event )
-	{
-		if( !_down )
-		{
-			return;
-		}
-
-		addPoint( event );
-
-		requestRender();
 	}
 
 	function onMouseUp( event )
@@ -431,11 +429,19 @@ Mandala = function( color, slices )
 	{
 		_down = true;
 
-		_path = [];
-
 		addPoint( event );
 
 		requestRender();
+	}
+
+	function onMouseMove( event )
+	{
+		if( _down )
+		{
+			addPoint( event );
+
+			requestRender();
+		}
 	}
 
 	function onMouseDoubleClick( event )
@@ -518,13 +524,12 @@ Mandala = function( color, slices )
 		);
 	}
 
-	var _test = [];
 
 	function animate()
 	{
-		_test = _path.slice();
-
-		_path = [];
+		_stroke = [];
+		_strokeHistoryIndex = -1;
+		_strokeHistoryActive = true;
 
 		_mainContext.clearRect( 0, 0, _width, _height );
 		_tempContext.clearRect( 0, 0, _width, _height );
@@ -534,13 +539,28 @@ Mandala = function( color, slices )
 
 	function animateCoords()
 	{
-		if( _test.length > 0 )
+		if( _strokeHistory.length > ++_strokeHistoryIndex )
 		{
-			_path.push( _test.shift() );
+			var s = _strokeHistory[ _strokeHistoryIndex ];
 
-			setTimeout( animateCoords, 50 );
+			if( s.end )
+			{
+				_strokeEnd = true;
 
-			render();
+				render();
+			}
+			else
+			{
+				_stroke.push( s );
+
+				render();
+			}
+
+			setTimeout( animateCoords, 60 );
+		}
+		else
+		{
+			_strokeHistoryActive = false;
 		}
 	}
 
