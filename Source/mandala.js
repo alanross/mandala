@@ -1,3 +1,10 @@
+/**
+ * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+ * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ *
+ * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+ * MIT license
+ */
 (function()
 {
 	var lastTime = 0;
@@ -33,7 +40,12 @@
 		};
 	}
 }());
-
+/**
+ * (c) 2013, Vladimir Agafonkin
+ * Simplify.js, a high-performance JS polyline simplification library
+ * mourner.github.io/simplify-js
+ * @constructor
+ */
 var RamerDouglasPeucker = function()
 {
 	function getSqDist( p1, p2 )
@@ -131,7 +143,6 @@ var RamerDouglasPeucker = function()
 		}
 	}
 
-	// simplification using Ramer-Douglas-Peucker algorithm
 	function simplifyDouglasPeucker( points, sqTolerance )
 	{
 		var last = points.length - 1;
@@ -143,7 +154,6 @@ var RamerDouglasPeucker = function()
 		return simplified;
 	}
 
-	// both algorithms combined for awesome performance
 	this.process = function( points, tolerance )
 	{
 		if( points.length <= 2 )
@@ -160,6 +170,9 @@ var RamerDouglasPeucker = function()
 	}
 };
 
+/**
+ * Alan Ross
+ */
 Mandala = function( color, slices )
 {
 	var _slices = slices || 48;
@@ -335,7 +348,7 @@ Mandala = function( color, slices )
 
 				_tempContext.moveTo( _cx + p0.dst * Math.cos( ra ), _cy + p0.dst * Math.sin( ra ) );
 
-				for( var j = 1; j < n; ++j )
+				for( var j = 0; j < n; ++j )
 				{
 					p0 = _coords[ j ];
 					p1 = _coords[ j + 1 ];
@@ -423,13 +436,13 @@ Mandala = function( color, slices )
 		_mainContext.drawImage( _tempCanvas, 0, 0 );
 
 		_tempContext.clearRect( 0, 0, _width, _height );
-
-		_coords = [];
 	}
 
 	function onMouseDown( event )
 	{
 		_down = true;
+
+		_coords = [];
 
 		addPoint( event );
 
@@ -456,6 +469,10 @@ Mandala = function( color, slices )
 		if( event.which == 83 )
 		{
 			exportCanvas();
+		}
+		else if( event.which == 65 )
+		{
+			animate();
 		}
 		else if( 49 <= event.which && event.which <= 57 )
 		{
@@ -510,6 +527,32 @@ Mandala = function( color, slices )
 				"<span style='display:block; text-align:center'>Right click on image to save.</span>" +
 				"<img src='" + img + "' alt='Exported from Mandala'/>"
 		);
+	}
+
+	var _test = [];
+
+	function animate()
+	{
+		_test = _coords.slice();
+
+		_coords = [];
+
+		_mainContext.clearRect( 0, 0, _width, _height );
+		_tempContext.clearRect( 0, 0, _width, _height );
+
+		animateCoords();
+	}
+
+	function animateCoords()
+	{
+		if( _test.length > 0 )
+		{
+			_coords.push( _test.shift() );
+
+			setTimeout( animateCoords, 50 );
+
+			render();
+		}
 	}
 
 	init();
