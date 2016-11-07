@@ -283,9 +283,11 @@ Mandala = function( containerId, buttonsId, color, slices )
 		_container.on( 'mouseup touchend', onStrokeEnd );
 
 		_window = $( window );
-		_window.resize( onResize ).keydown( onKeyDown );
+		_window.resize( onResize );
+		_window.keydown( onKeyDown );
 
 		$( buttonsId ).find( 'i' ).click( onButtonClick );
+
 		reset();
 
 		importPath();
@@ -559,7 +561,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 
 	function onKeyDown( event )
 	{
-		event.preventDefault();
+		//event.preventDefault();
 
 		if( !event.which )
 		{
@@ -575,34 +577,42 @@ Mandala = function( containerId, buttonsId, color, slices )
 			requestRender();
 		}
 
-		return false;
+		//return false;
 	}
 
 	function exportPath()
 	{
 		var path = "";
+		var wid = -1;
 
-		for( var i = 0, n = _strokeHistory.length; i < n; ++i )
+		for( var i = 0; i < _strokeHistory.length; ++i )
 		{
 			var s = _strokeHistory[ i ];
 
-			if( s.end )
+			if( !s.end )
 			{
-				path += "|";
+				if( wid != s.wid )
+				{
+					wid = s.wid;
+					path += s.wid + ",";
+				}
+
+				path += ( s.dst * QUANT ) + "," + ( s.ang * QUANT ) + ",";
 			}
 			else
 			{
-				path += ( s.dst * QUANT ) + "." + ( s.ang * QUANT ) + "." + ( s.wid ) + ".";
+				path = path.replace( /,$/, '' ) + "|";
+				wid = -1;
 			}
 		}
 
-		path = path.replace( /\|$/, '' ).replace( /\.$/, '' );
+		path = path.replace( /\|$/, '' ).replace( /,$/, '' );
 
-		//path = lzwEncode( path );
+		var url = window.location.href.split( '?' )[ 0 ] + "?p=" + path;
 
-		window.prompt( "Copy to clipboard: Ctrl+C, Enter", window.location.href + "?p=" + path );
+		window.prompt( "Copy to clipboard: Ctrl+C, Enter", url );
 
-		//window.open( window.location.href + "?p=" + path );
+		//window.open( url );
 	}
 
 	function importPath()
@@ -611,32 +621,41 @@ Mandala = function( containerId, buttonsId, color, slices )
 
 		if( path )
 		{
-			//path = lzwDecode( path );
-
 			_strokeHistory = [];
 
 			var strokes = path.split( "|" );
 
 			for( var i = 0; i < strokes.length; ++i )
 			{
-				var units = strokes[ i ].split( "." );
+				var isValid = false;
+				var tmp = [];
 
-				for( var j = 0; j < units.length; j += 3 )
+				var units = strokes[ i ].split( "," );
+
+				var wid = parseInt( units[ 0 ] );
+
+				for( var j = 1; j < units.length; j += 2 )
 				{
 					var dst = parseInt( units[ j ] );
 					var ang = parseInt( units[ j + 1 ] );
-					var wid = parseInt( units[ j + 2 ] );
 
 					if( !isNaN( dst ) && !isNaN( ang ) && !isNaN( wid ) )
 					{
-						_strokeHistory.push( { dst: ( dst / QUANT ), ang: ( ang / QUANT ), wid: wid } );
+						isValid = true;
+						tmp.push( { dst: ( dst / QUANT ), ang: ( ang / QUANT ), wid: wid } );
 					}
 				}
 
-				_strokeHistory.push( { end: true } );
+				if( tmp.length > 0 )
+				{
+					_strokeHistory = _strokeHistory.concat( tmp, [ { end: true } ] );
+				}
 			}
 
-			animate();
+			if( _strokeHistory.length > 0 )
+			{
+				animate();
+			}
 		}
 	}
 
