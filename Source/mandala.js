@@ -193,8 +193,11 @@ Mandala = function( color, slices )
 
 	var _rdp;
 
-	var _coords = [];
+	var _path = [];
 	var _down = false;
+	var _strokeEnd = false;
+
+	var _history = [];
 
 	function init()
 	{
@@ -223,7 +226,8 @@ Mandala = function( color, slices )
 		_cx = _width >> 1;
 		_cy = _height >> 1;
 
-		_coords = [];
+		_path = [];
+		_history = [];
 
 		_container.css( { "top": 0, "left": 0, "width": _width, "height": _height } );
 
@@ -276,14 +280,20 @@ Mandala = function( color, slices )
 	{
 		_tempContext.clearRect( 0, 0, _width, _height );
 
-		if( _coords.length == 0 )
+		if( _path.length == 0 )
 		{
 			return;
 		}
 
-		for( var i = 0; i < _coords.length; ++i )
+		var angle = 0;
+		var step = 360 / _slices;
+		var mirror = -1;
+
+		var rStp = step * Math.PI / 180;
+
+		for( var i = 0; i < _path.length; ++i )
 		{
-			var p = _coords[ i ];
+			var p = _path[ i ];
 			var dx = p.x - _cx;
 			var dy = p.y - _cy;
 
@@ -291,16 +301,12 @@ Mandala = function( color, slices )
 			p.ang = Math.atan2( p.y - _cy, p.x - _cx );
 		}
 
-		var angle = 0;
-		var step = 360 / _slices;
-		var mirror = -1;
-
 		_tempContext.strokeStyle = _color;
 		_tempContext.fillStyle = _color;
 
-		if( _coords.length == 1 )
+		if( _path.length == 1 )
 		{
-			var p = _coords[ 0 ];
+			var p = _path[ 0 ];
 
 			for( var i = 0; i < _slices; ++i )
 			{
@@ -309,10 +315,7 @@ Mandala = function( color, slices )
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.strokeStyle = _color;
 
-				var rAng = angle * Math.PI / 180;
-				var rStp = step * Math.PI / 180;
-
-				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+				var r = ( angle * Math.PI / 180 ) + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
 				var x = _cx + p.dst * Math.cos( r );
 				var y = _cy + p.dst * Math.sin( r );
 
@@ -329,71 +332,60 @@ Mandala = function( color, slices )
 		}
 		else
 		{
-			var n = _coords.length - 2;
-
 			for( var i = 0; i < _slices; ++i )
 			{
-				var rAng = angle * Math.PI / 180;
-				var rStp = step * Math.PI / 180;
-
 				_tempContext.save();
+
 				_tempContext.strokeStyle = _color;
 				_tempContext.lineWidth = _lineWidth;
 				_tempContext.beginPath();
 
-				var p0 = _coords[ 0 ];
-				var p1;
+				var rAng = angle * Math.PI / 180;
 
-				var ra = rAng + ( ( mirror > 0 ) ? rStp - p0.ang : p0.ang );
+				var p = _path[ 0 ];
+				var r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+				var x1 = _cx + p.dst * Math.cos( r );
+				var y1 = _cy + p.dst * Math.sin( r );
 
-				_tempContext.moveTo( _cx + p0.dst * Math.cos( ra ), _cy + p0.dst * Math.sin( ra ) );
+				_tempContext.moveTo( x1, y1 );
 
-				for( var j = 0; j < n; ++j )
+				var n = _path.length - 1;
+
+				for( var j = 1; j < n; ++j )
 				{
-					p0 = _coords[ j ];
-					p1 = _coords[ j + 1 ];
+					p = _path[ j ];
+					r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+					var x2 = _cx + p.dst * Math.cos( r );
+					var y2 = _cy + p.dst * Math.sin( r );
 
-					var ra0 = rAng + p0.ang;
-					var ra1 = rAng + p1.ang;
+					_tempContext.quadraticCurveTo( x1, y1, ( ( x1 + x2 ) * 0.5 ), ( ( y1 + y2 ) * 0.5 ) );
 
-					if( mirror > 0 )
-					{
-						ra0 = rAng + rStp - p0.ang;
-						ra1 = rAng + rStp - p1.ang;
-					}
-
-					var x0 = _cx + p0.dst * Math.cos( ra0 );
-					var y0 = _cy + p0.dst * Math.sin( ra0 );
-
-					var x1 = _cx + p1.dst * Math.cos( ra1 );
-					var y1 = _cy + p1.dst * Math.sin( ra1 );
-
-					_tempContext.quadraticCurveTo( x0, y0, ( ( x0 + x1 ) * 0.5 ), ( ( y0 + y1 ) * 0.5 ) );
+					x1 = x2;
+					y1 = y2;
 				}
 
-				p0 = _coords[ j ];
-				p1 = _coords[ j + 1 ];
+				p = _path[ n ];
+				r = rAng + ( ( mirror > 0 ) ? rStp - p.ang : p.ang );
+				x2 = _cx + p.dst * Math.cos( r );
+				y2 = _cy + p.dst * Math.sin( r );
 
-				var ra0 = rAng + p0.ang;
-				var ra1 = rAng + p1.ang;
-
-				if( mirror > 0 )
-				{
-					ra0 = rAng + rStp - p0.ang;
-					ra1 = rAng + rStp - p1.ang;
-				}
-
-				_tempContext.quadraticCurveTo(
-						_cx + p0.dst * Math.cos( ra0 ), _cy + p0.dst * Math.sin( ra0 ),
-						_cx + p1.dst * Math.cos( ra1 ), _cy + p1.dst * Math.sin( ra1 )
-				);
+				_tempContext.quadraticCurveTo( x1, y1, x2, y2 );
 				_tempContext.stroke();
-
-				_tempContext.restore();
 
 				angle += step;
 				mirror *= -1;
+
+				_tempContext.restore();
 			}
+		}
+
+		if( _strokeEnd )
+		{
+			_mainContext.drawImage( _tempCanvas, 0, 0 );
+
+			_tempContext.clearRect( 0, 0, _width, _height );
+
+			_strokeEnd = false;
 		}
 	}
 
@@ -403,9 +395,9 @@ Mandala = function( color, slices )
 
 		var pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
 
-		_coords.push( pos );
-		_coords = _rdp.process( _coords, 0.9 );
-		_coords.push( pos );
+		_path.push( pos );
+		_path = _rdp.process( _path, 0.9 );
+		_path.push( pos );
 	}
 
 	function requestRender()
@@ -428,21 +420,18 @@ Mandala = function( color, slices )
 	function onMouseUp( event )
 	{
 		_down = false;
+		_strokeEnd = true;
 
 		addPoint( event );
 
 		requestRender();
-
-		_mainContext.drawImage( _tempCanvas, 0, 0 );
-
-		_tempContext.clearRect( 0, 0, _width, _height );
 	}
 
 	function onMouseDown( event )
 	{
 		_down = true;
 
-		_coords = [];
+		_path = [];
 
 		addPoint( event );
 
@@ -533,9 +522,9 @@ Mandala = function( color, slices )
 
 	function animate()
 	{
-		_test = _coords.slice();
+		_test = _path.slice();
 
-		_coords = [];
+		_path = [];
 
 		_mainContext.clearRect( 0, 0, _width, _height );
 		_tempContext.clearRect( 0, 0, _width, _height );
@@ -547,7 +536,7 @@ Mandala = function( color, slices )
 	{
 		if( _test.length > 0 )
 		{
-			_coords.push( _test.shift() );
+			_path.push( _test.shift() );
 
 			setTimeout( animateCoords, 50 );
 
