@@ -178,7 +178,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 	var QUANT = 1000;
 	var _slices = slices || 48;
 	var _color = color || '#FFFFFF';
-	var _lineWidth = 2;
+	var _lineWidth = 3;
 
 	var _width;
 	var _height;
@@ -272,7 +272,7 @@ Mandala = function( containerId, buttonsId, color, slices )
 		{
 			_mainContext.save();
 			_mainContext.beginPath();
-			_mainContext.strokeStyle = '#232323';
+			_mainContext.strokeStyle = '#787878';
 			_mainContext.lineWidth = 1;
 
 			var r = angle * Math.PI / 180;
@@ -634,6 +634,8 @@ Mandala = function( containerId, buttonsId, color, slices )
 
 		_mainContext.clearRect( 0, 0, _width, _height );
 		_tempContext.clearRect( 0, 0, _width, _height );
+
+		renderAxis();
 
 		animateStroke();
 	}
